@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
-#define MAX_CHAR 257
+#define MAX_CHAR 128
 
 typedef struct node_tree { // Struct que representa um nó da árvore de Huffman
   char ch;
@@ -50,48 +49,57 @@ tree *join(tree *t1, tree *t2) { // Função que constroe novo nó na árvore de
   return root;
 }
 
-void huffman_coding(tree *root, int *v, int bin) { // Codificação a partir da árvore de Huffman
+void huffman_encoding(tree *root, int *v, int bin) { // Codificação a partir da árvore de Huffman
   if(root) { 
     if(root->ch) v[(int)(root->ch)] = bin;
-    huffman_coding(root->l, v, bin << 1);
-    huffman_coding(root->r, v, bin << 1 | 1);
+    huffman_encoding(root->l, v, bin << 1);
+    huffman_encoding(root->r, v, bin << 1 | 1);
   }
 }
 
 int count_bits(int n) {
-  unsigned int count = 0;
-  while (n) {
+  int count = 0;
+  do {
     count++;
     n >>= 1;
-  }
+  } while(n);
   return count;
 }
 
-int compressing(FILE *f, int *cod) {
-  int bin = 0b0;
+void compressing(FILE *f, FILE *fc, int *cod) {
+  char ch = getc(f); int b = cod[(int)(ch)];
+  int len = count_bits(b);
   while(1) {
-    char ch = getc(f);
+    ch = getc(f);
     if(feof(f)) break;
     int c = cod[(int)(ch)];
     int n = count_bits(c);
-    bin = (bin << n) | c;
+    b = b << n | c; len += n;
+    if(len >= 7) {
+      len -= 7;
+      putc((b >> len) & 0x7f, fc);
+    }
   }
-  return bin;
+  len = 7 - len;
+  putc((b << len) & 0x7f, fc);
+}
+
+unsigned long fsize(FILE *f) {
+  fseek(f, 0L, SEEK_END);
+  unsigned long sz = ftell(f);
+  return sz;
 }
 
 int main() {
   // Calcula as frequências de cada símbolo
   FILE *f = fopen("text.txt", "r");
-  int bin = 0b0;
   while(1) {
     char ch = getc(f);
     if(feof(f)) break;
     int c = (int)(ch);
-    bin = bin << 8 | c;
     if(!v[c].freq) v[c].ch = ch;
     v[c].freq++;
   }
-  rewind(f);
 
   // Inicialização da priority_queue
   for(int i = 0; i < MAX_CHAR; i++) {
@@ -110,16 +118,15 @@ int main() {
 
   // Codificação de cada char a partir da árvore de Huffman
   int cod[MAX_CHAR];
-  huffman_coding(root, cod, 0); 
+  huffman_encoding(root, cod, 0); 
 
   // Compressão do arquivo
-  FILE *fc = fopen("text_compressed.txt", "w");
-  int bin_cmp = compressing(f, cod);
+  FILE *fc = fopen("text_cmp.txt", "w"); rewind(f);
+  compressing(f, fc, cod);
 
-  printf("%d\n", bin);
-  printf("%d\n", bin_cmp);
-  
-  fclose(f);
+  printf("%ld %ld\n", fsize(f), fsize(fc));
+
+  fclose(f); fclose(fc);
 
   return 0;
 }
