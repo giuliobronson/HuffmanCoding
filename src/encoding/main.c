@@ -2,14 +2,16 @@
 #include <stdlib.h>
 #define MAX_CHAR 128
 
-typedef struct node_tree { // Struct que representa um nó da árvore de Huffman
+// Struct que representa um nó da árvore de Huffman
+typedef struct node_tree { 
   char ch;
   int freq;
   struct node_tree *l;
   struct node_tree *r;
 } tree;
 
-typedef struct node_queue { // Struct que representa um nó da priority_queue
+// Struct que representa um nó da fila de prioridade
+typedef struct node_queue { 
   struct node_tree node;
   struct node_queue *nxt;
 } priority_queue;
@@ -18,7 +20,14 @@ priority_queue *init = NULL;
 tree *root = NULL;
 tree v[MAX_CHAR]; 
 
-int push(priority_queue **pq, tree *node) { // Função que insere nó na priority_queue
+/**
+ * Função que insere nó na fila de prioridade
+ * 
+ * @param pq ponteiro para o início da fila de prioridade 
+ * @param node ponteiro para o nó adicionado
+ * @returns booleano indicando o sucesso da inserção 
+ */
+int push(priority_queue **pq, tree *node) {
   priority_queue *aux = *pq, *prv = NULL;
   aux = *pq;
   while(aux) {
@@ -34,14 +43,27 @@ int push(priority_queue **pq, tree *node) { // Função que insere nó na priori
   return 1;
 }
 
-priority_queue *pop(priority_queue **pq) { // Função que retira o primeiro o elemento do topo da fila
+/**
+ * Função que retira o primeiro o elemento do topo da fila de prioridade
+ * 
+ * @param pq ponteiro para o início da fila de prioridade
+ * @returns nó que foi retirado 
+ */
+priority_queue *pop(priority_queue **pq) { 
   priority_queue *aux = *pq;
   if(!aux) return NULL; // Fila vazia
   *pq = (*pq)->nxt;
   return aux;
 }
 
-tree *join(tree *t1, tree *t2) { // Função que constroe novo nó na árvore de Huffman
+/**
+ * Função que constroe novo nó na árvore de Huffman
+ * 
+ * @param t1 primeiro nó
+ * @param t2 segundo nó
+ * @returns nó pai dos dois nós passados como parâmetro
+ */
+tree *join(tree *t1, tree *t2) {
   tree *root = (tree*)malloc(sizeof(tree));
   root->freq = t1->freq + t2->freq;
   root->l = t1;
@@ -49,7 +71,14 @@ tree *join(tree *t1, tree *t2) { // Função que constroe novo nó na árvore de
   return root;
 }
 
-void huffman_encoding(tree *root, int *v, int bin) { // Codificação a partir da árvore de Huffman
+/**
+ * Codificação a partir da árvore de Huffman
+ * 
+ * @param root ponteiro para a raiz da árvora de Huffman
+ * @param v array com a nova codificação de cada caractere
+ * @param bin binário com a nova codificação
+ */
+void huffman_encoding(tree *root, int *v, int bin) { 
   if(root) { 
     if(root->ch) v[(int)(root->ch)] = bin;
     huffman_encoding(root->l, v, bin << 1);
@@ -57,6 +86,7 @@ void huffman_encoding(tree *root, int *v, int bin) { // Codificação a partir d
   }
 }
 
+// Contador de bits de um número inteiro
 int count_bits(int n) {
   int count = 0;
   do {
@@ -66,6 +96,15 @@ int count_bits(int n) {
   return count;
 }
 
+/**
+ * Função que associa a cada caractere de um arquivo a nova codificação 
+ * de Huffman
+ * 
+ * @param f ponteiro para o arquivo original
+ * @param fc ponteiro para o arquivo codificado
+ * @param cod array com os códigos de cada caractere obtido a partir da ávore de 
+ *            Huffman
+ */
 void compressing(FILE *f, FILE *fc, int *cod) {
   char ch = getc(f); int b = cod[(int)(ch)];
   int len = count_bits(b);
@@ -84,6 +123,12 @@ void compressing(FILE *f, FILE *fc, int *cod) {
   putc((b << len) & 0x7f, fc);
 }
 
+/**
+ * Função que calcula o número de bytes do arquivo 
+ * 
+ * @param f ponteiro para o arquivo
+ * @returns tamanho do arquivo 
+ */
 unsigned long fsize(FILE *f) {
   fseek(f, 0L, SEEK_END);
   unsigned long sz = ftell(f);
