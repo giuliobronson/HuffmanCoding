@@ -52,5 +52,6 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
-# Editors files
+# Local files
 .vscode/
+*.txt
