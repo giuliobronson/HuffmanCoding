@@ -4,8 +4,8 @@
 
 // Struct que representa um nó da árvore de Huffman
 typedef struct node_tree { 
-  char ch;
   int freq;
+  char ch;
   struct node_tree *l;
   struct node_tree *r;
 } tree;
@@ -75,25 +75,21 @@ tree *join(tree *t1, tree *t2) {
  * Codificação a partir da árvore de Huffman
  * 
  * @param root ponteiro para a raiz da árvora de Huffman
- * @param v array com a nova codificação de cada caractere
+ * @param v matriz com a nova codificação de cada caractere e número de bits
  * @param bin binário com a nova codificação
  */
-void huffman_encoding(tree *root, int *v, int bin) { 
+void huffman_encoding(tree *root, int (*v)[2], int bin) { 
   if(root) { 
-    if(root->ch) v[(int)(root->ch)] = bin;
+    static int n = 0;
+    n++;
+    if(root->ch) {
+      v[(int)(root->ch)][0] = bin;
+      v[(int)(root->ch)][1] = n - 1;
+    }
     huffman_encoding(root->l, v, bin << 1);
     huffman_encoding(root->r, v, bin << 1 | 1);
+    n--;
   }
-}
-
-// Contador de bits de um número inteiro
-int count_bits(int n) {
-  int count = 0;
-  do {
-    count++;
-    n >>= 1;
-  } while(n);
-  return count;
 }
 
 /**
@@ -102,18 +98,18 @@ int count_bits(int n) {
  * 
  * @param f ponteiro para o arquivo original
  * @param fc ponteiro para o arquivo codificado
- * @param cod array com os códigos de cada caractere obtido a partir da ávore de 
- *            Huffman
+ * @param cod matriz com os códigos de cada caractere obtido a partir da ávore de 
+ *            Huffman e o número de bits
  */
-void compressing(FILE *f, FILE *fc, int *cod) {
-  char ch = getc(f); int b = cod[(int)(ch)];
-  int len = count_bits(b);
+void compressing(FILE *f, FILE *fc, int (*cod)[2]) {
+  int b = 0; int len = 0;
   while(1) {
-    ch = getc(f);
+    char ch = getc(f);
     if(feof(f)) break;
-    int c = cod[(int)(ch)];
-    int n = count_bits(c);
+    int c = cod[(int)(ch)][0];
+    int n = cod[(int)(ch)][1];
     b = b << n | c; len += n;
+    b &= 0xffff; // Evita o overflow
     if(len >= 7) {
       len -= 7;
       putc((b >> len) & 0x7f, fc);
@@ -162,7 +158,7 @@ int main() {
   }
 
   // Codificação de cada char a partir da árvore de Huffman
-  int cod[MAX_CHAR];
+  int cod[MAX_CHAR][2];
   huffman_encoding(root, cod, 0); 
 
   // Compressão do arquivo
@@ -170,8 +166,6 @@ int main() {
   compressing(f, fc, cod);
 
   printf("%ld %ld\n", fsize(f), fsize(fc));
-
-  fclose(f); fclose(fc);
 
   return 0;
 }
